@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatty - Your Friendly Chatbot (Advanced Design)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles for body and overall layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            /* Dark, subtle gradient background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* Ensures it takes full viewport height */
+            margin: 0;
+            padding: 2rem;
+            /* Generous padding around the container for desktop */
+            box-sizing: border-box;
+            color: #e2e8f0;
+            /* Light gray default text color */
+            overflow: hidden;
+            /* Prevent body scroll when modal is active */
+        }
+
+        /* Chat container styling */
+        .chat-container {
+            background-color: #2d3748;
+            /* Dark blue-gray for container */
+            border-radius: 2.5rem;
+            /* Even more rounded, softer edges */
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+            /* Deeper, softer shadow for dark theme */
+            width: 100%;
+            /* Takes full width available */
+            max-width: 650px;
+            /* Max width for desktop to prevent being too wide */
+            height: 90vh;
+            /* Set a max height for desktop to fit in viewport */
+            max-height: 800px;
+            /* Absolute max height for very large screens */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Ensures content doesn't spill out */
+            transition: all 0.5s ease-in-out;
+            /* Smoother transitions for responsiveness */
+            border: 1px solid rgba(74, 85, 104, 0.5);
+            /* Subtle border for definition with transparency */
+            backdrop-filter: blur(5px);
+            /* Subtle blur effect */
+            -webkit-backdrop-filter: blur(5px);
+            /* For Safari */
+        }
+
+        /* Chat header styling */
+        .chat-header {
+            background: linear-gradient(to right, #1a202c, #2d3748);
+            /* Dark gradient header */
+            color: #e2e8f0;
+            /* Light text for header */
+            padding: 2rem 2.25rem;
+            /* More generous padding */
+            text-align: center;
+            font-size: 2.25rem;
+            /* Larger, more impactful title */
+            font-weight: 700;
+            border-top-left-radius: 2.5rem;
+            border-top-right-radius: 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            /* Keep header visible on scroll */
+            top: 0;
+            z-index: 10;
+            letter-spacing: -0.04em;
+            /* Tighter letter spacing for title */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            /* More prominent header shadow */
+            border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+            /* Subtle bottom border */
+        }
+
+        .chat-header h1 {
+            flex-grow: 1;
+            text-align: center;
+            margin: 0;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+            /* Subtle text shadow for title */
+        }
+
+        /* Clear chat button styling */
+        .clear-button {
+            background-color: #dc2626;
+            /* Darker red for clear button */
+            color: white;
+            padding: 0.8rem 1.6rem;
+            /* Adjusted padding */
+            border-radius: 1.25rem;
+            /* More rounded */
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            /* Slightly larger font */
+            font-weight: 600;
+            transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            /* More prominent button shadow */
+            outline: none;
+            /* Remove outline on focus */
+        }
+
+        .clear-button:hover {
+            background-color: #b91c1c;
+            /* Even darker red */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
+            transform: translateY(-3px);
+            /* More noticeable lift on hover */
+        }
+
+        .clear-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chat messages area styling */
+        .chat-messages {
+            flex-grow: 1;
+            /* Allows message area to take up remaining space */
+            padding: 2.5rem;
+            /* More padding */
+            overflow-y: auto;
+            /* Enables scrolling for messages */
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            /* Increased space between messages */
+            background-color: #242b38;
+            /* Slightly lighter dark background for messages */
+            scroll-behavior: smooth;
+            /* Smooth scrolling for new messages */
+        }
+
+        /* Individual message bubble styling */
+        .message {
+            max-width: 85%;
+            /* Slightly narrower for better flow */
+            padding: 1.1rem 1.5rem;
+            /* Adjusted padding */
+            border-radius: 1.75rem;
+            /* Large rounded corners for bubbles */
+            word-wrap: break-word;
+            line-height: 1.7;
+            /* Improved line height */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            /* Soft, consistent shadow for bubbles */
+            font-size: 1rem;
+            /* Standard text size */
+            color: #e2e8f0;
+            /* Light text for readability */
+            position: relative;
+            animation: fadeInMessage 0.3s ease-out forwards;
+            /* Fade in animation */
+        }
+
+        @keyframes fadeInMessage {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background-color: #4a5568;
+            /* Dark gray-blue for user messages */
+            color: #f0f4f8;
+            /* Very light text for user */
+            align-self: flex-end;
+            border-bottom-right-radius: 0.875rem;
+            /* Asymmetric rounding */
+        }
+
+        .bot-message {
+            background-color: #3f51b5;
+            /* Deeper blue for bot messages */
+            color: #e0f2f7;
+            /* Light cyan for bot text */
+            align-self: flex-start;
+            border-bottom-left-radius: 0.875rem;
+            /* Asymmetric rounding */
+        }
+
+        .message img {
+            max-width: 100%;
+            border-radius: 1.25rem;
+            /* Rounded corners for images */
+            margin-top: 1rem;
+            /* More space above image */
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+            /* Stronger shadow for images */
+        }
+
+        /* Chat input area styling */
+        .chat-input-area {
+            display: flex;
+            padding: 2rem 2.25rem;
+            /* Consistent padding with header */
+            border-top: 1px solid rgba(74, 85, 104, 0.5);
+            /* Darker border with transparency */
+            gap: 1rem;
+            /* Increased gap between input and buttons */
+            align-items: center;
+            background-color: #2d3748;
+            /* Dark blue-gray for input area */
+            border-bottom-left-radius: 2.5rem;
+            border-bottom-right-radius: 2.5rem;
+            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.4);
+            /* Shadow for input area */
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 1.1rem 1.5rem;
+            /* Adjusted padding */
+            border-radius: 1.25rem;
+            border: 1px solid #64748b;
+            /* Slate-600 for input border */
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+            /* Inner shadow for depth */
+            background-color: #1a202c;
+            /* Even darker input background */
+            color: #e2e8f0;
+            /* Light text for input */
+        }
+
+        .chat-input:focus {
+            border-color: #6366f1;
+            /* Primary blue on focus */
+            box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.4), inset 0 2px 8px rgba(0, 0, 0, 0.3);
+            /* More prominent focus shadow */
+        }
+
+        .chat-input::placeholder {
+            color: #94a3b8;
+            /* Lighter placeholder text */
+        }
+
+        /* Send and Upload buttons styling */
+        .send-button,
+        .upload-button {
+            background: linear-gradient(to right, #4f46e5, #6366f1);
+            /* Vibrant blue gradient buttons */
+            color: white;
+            padding: 1.1rem 2rem;
+            /* Adjusted padding */
+            border-radius: 1.25rem;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+            /* Smooth transitions */
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            /* Button shadow */
+            outline: none;
+            /* Remove outline on focus */
+            position: relative;
+            /* For pseudo-elements/glow */
+            overflow: hidden;
+            /* Hide overflow for glow effect */
+        }
+
+        .send-button::before,
+        .upload-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300%;
+            height: 300%;
+            background: rgba(255, 255, 255, 0.15);
+            /* Subtle white highlight */
+            border-radius: 50%;
+            transition: all 0.7s ease-out;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 0;
+        }
+
+        .send-button:hover::before,
+        .upload-button:hover::before {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .send-button:hover,
+        .upload-button:hover {
+            background: linear-gradient(to right, #6366f1, #818cf8);
+            /* Lighter gradient on hover */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+            transform: translateY(-4px);
+            /* More noticeable lift on hover */
+        }
+
+        .send-button:active,
+        .upload-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Loading indicator styling */
+        .loading-indicator {
+            align-self: flex-start;
+            padding: 1rem 1.35rem;
+            border-radius: 1.5rem;
+            background-color: #3f51b5;
+            /* Same as bot message for consistency */
+            color: #e0f2f7;
+            /* Light cyan */
+            font-style: italic;
+            opacity: 0.9;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: pulse 1.8s infinite ease-in-out;
+            /* Slower, more subtle pulsing animation */
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.9;
+            }
+
+            50% {
+                transform: scale(1.01);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 0.9;
+            }
+        }
+
+        /* Hidden file input */
+        #fileInput {
+            display: none;
+        }
+
+        /* Password Modal Styles */
+        .password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            /* Darker overlay */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            /* On top of everything */
+            backdrop-filter: blur(8px);
+            /* More blur for modal */
+            -webkit-backdrop-filter: blur(8px);
+            /* For Safari */
+        }
+
+        .password-modal {
+            background-color: #2d3748;
+            /* Same as chat container */
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            color: #e2e8f0;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.9);
+            opacity: 0;
+            animation: fadeInScale 0.5s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+            /* Smoother animation */
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            /* Subtle blue border */
+        }
+
+        @keyframes fadeInScale {
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .password-modal h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #6366f1;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .password-modal input[type="password"] {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            border: 1px solid #4a5568;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            font-size: 1.1rem;
+            margin-bottom: 1.25rem;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+            /* Inner shadow */
+        }
+
+        .password-modal input[type="password"]:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.4), inset 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .password-modal button {
+            background: linear-gradient(to right, #4f46e5, #6366f1);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            outline: none;
+            /* Remove outline on focus */
+            position: relative;
+            /* For pseudo-elements/glow */
+            overflow: hidden;
+            /* Hide overflow for glow effect */
+        }
+
+        .password-modal button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300%;
+            height: 300%;
+            background: rgba(255, 255, 255, 0.15);
+            /* Subtle white highlight */
+            border-radius: 50%;
+            transition: all 0.7s ease-out;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 0;
+        }
+
+        .password-modal button:hover::before {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .password-modal button:hover {
+            background: linear-gradient(to right, #6366f1, #818cf8);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+            transform: translateY(-3px);
+        }
+
+        .password-modal button:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .password-error {
+            color: #ef4444;
+            /* Red error message */
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            animation: shake 0.5s ease-in-out;
+            /* Shake animation for error */
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20%,
+            60% {
+                transform: translateX(-10px);
+            }
+
+            40%,
+            80% {
+                transform: translateX(10px);
+            }
+        }
+
+
+        /* Responsive adjustments */
+        /* For screens smaller than 768px (common tablet breakpoint) */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                /* Remove body padding on small screens */
+            }
+
+            .chat-container {
+                min-height: 100vh;
+                /* Full screen height on mobile */
+                height: 100vh;
+                /* Ensure it truly takes full height */
+                border-radius: 0;
+                /* No rounded corners on full screen */
+                box-shadow: none;
+                /* No shadow on full screen */
+                max-width: 100%;
+                /* Take full width */
+                border: none;
+                /* No border on full screen */
+                backdrop-filter: none;
+                /* Disable blur on mobile for performance/simplicity */
+                -webkit-backdrop-filter: none;
+            }
+
+            .chat-header {
+                border-radius: 0;
+                padding: 1.5rem 1.75rem;
+                font-size: 2rem;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+            }
+
+            .clear-button {
+                padding: 0.7rem 1.2rem;
+                font-size: 0.9rem;
+            }
+
+            .chat-messages {
+                padding: 1.5rem;
+                gap: 1.25rem;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 0.9rem 1.2rem;
+                font-size: 0.95rem;
+            }
+
+            .chat-input-area {
+                padding: 1.5rem 1.75rem;
+                flex-wrap: wrap;
+                /* Allow buttons to wrap */
+                gap: 0.75rem;
+                /* Smaller gap on mobile */
+                border-radius: 0;
+                /* No rounded corners on full screen */
+                box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+            }
+
+            .chat-input {
+                width: 100%;
+                /* Full width input */
+                margin-bottom: 0.75rem;
+                /* Space below input */
+                padding: 0.9rem 1.2rem;
+            }
+
+            .upload-button,
+            .send-button {
+                flex-grow: 1;
+                /* Make buttons take equal space */
+                padding: 0.9rem 1.5rem;
+                font-size: 0.95rem;
+            }
+
+            .password-modal {
+                padding: 2rem;
+                border-radius: 1rem;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+                border: none;
+                /* Remove border on mobile modal */
+            }
+
+            .password-modal h2 {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .password-modal input[type="password"] {
+                padding: 0.9rem 1rem;
+                font-size: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .password-modal button {
+                padding: 0.9rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+
+        /* For screens smaller than 480px (common small phone breakpoint) */
+        @media (max-width: 480px) {
+            .chat-header {
+                font-size: 1.75rem;
+                padding: 1.25rem 1.5rem;
+            }
+
+            .clear-button {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.8rem;
+            }
+
+            .chat-messages {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .message {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .chat-input-area {
+                padding: 1rem 1.25rem;
+                gap: 0.5rem;
+            }
+
+            .chat-input,
+            .upload-button,
+            .send-button {
+                padding: 0.8rem 1.1rem;
+                font-size: 0.9rem;
+            }
+
+            .password-modal {
+                padding: 1.5rem;
+            }
+
+            .password-modal h2 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="passwordOverlay" class="password-overlay">
+        <div class="password-modal">
+            <h2>Enter Password to Access Chatty</h2>
+            <input type="password" id="passwordInput" placeholder="Password">
+            <button id="passwordSubmit">Submit</button>
+            <p id="passwordError" class="password-error hidden">Incorrect password. Please try again.</p>
+        </div>
+    </div>
+
+    <div class="chat-container hidden" id="chatContainer">
+        <div class="chat-header">
+            <h1 class="text-center">Chatty</h1>
+            <button id="clearChatButton" class="clear-button">Clear Chat</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="bot-message message">Hello! I'm Chatty, your friendly chatbot. How can I help you today?</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Type your message...">
+            <input type="file" id="fileInput" accept="image/*,.doc,.docx,.pdf,.ppt,.pptx">
+            <button id="uploadButton" class="upload-button">Upload Photo/File</button>
+            <button id="sendButton" class="send-button">Send</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Get references to DOM elements
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearChatButton = document.getElementById('clearChatButton');
+        const uploadButton = document.getElementById('uploadButton');
+        const fileInput = document.getElementById('fileInput');
+
+        // Password elements
+        const passwordOverlay = document.getElementById('passwordOverlay');
+        const passwordInput = document.getElementById('passwordInput');
+        const passwordSubmit = document.getElementById('passwordSubmit');
+        const passwordError = document.getElementById('passwordError');
+        const chatContainer = document.getElementById('chatContainer');
+
+        const CORRECT_PASSWORD = "4241550"; // The required password
+
+        let uploadedImageBase64 = null; // To store the base64 of the uploaded image
+
+        // Function to get the current date and time in a readable format
+        function getCurrentDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long', // e.g., "Thursday"
+                year: 'numeric', // e.g., "2025"
+                month: 'long', // e.g., "May"
+                day: 'numeric', // e.g., "23"
+                hour: '2-digit', // e.g., "08"
+                minute: '2-digit', // e.g., "34"
+                second: '2-digit', // e.g., "56"
+                timeZoneName: 'shortOffset' // e.g., "GMT+2"
+            };
+            return now.toLocaleString('en-US', options);
+        }
+
+        // Function to detect the language of the input text
+        function detectLanguage(text) {
+            // Regular expression to match common Arabic characters
+            const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDCF\uFDF0-\uFDFF\uFE70-\uFEFF]/;
+            if (arabicRegex.test(text)) {
+                return 'arabic';
+            }
+            return 'english'; // Default to English if no Arabic characters are found
+        }
+
+        // Function to add a message (text and/or image) to the chat display
+        function addMessage(text, sender, imageUrl = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            if (sender === 'user') {
+                messageDiv.classList.add('user-message');
+            } else {
+                messageDiv.classList.add('bot-message');
+            }
+
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = "Uploaded image";
+                messageDiv.appendChild(img);
+            }
+
+            // Only add text if it's not empty
+            if (text.trim() !== '') {
+                const textNode = document.createTextNode(text);
+                messageDiv.appendChild(textNode);
+            } else if (!imageUrl) {
+                // If no text and no image, don't add an empty message bubble
+                return;
+            }
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to show a loading indicator
+        function showLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('loading-indicator');
+            loadingDiv.id = 'loadingIndicator';
+            loadingDiv.textContent = 'Chatty is typing...';
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to remove the loading indicator
+        function removeLoadingIndicator() {
+            const loadingDiv = document.getElementById('loadingIndicator');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        // Function to send a message and get a response from the LLM
+        async function sendMessage() {
+            const userMessageText = chatInput.value.trim();
+            const hasImage = uploadedImageBase64 !== null;
+
+            // Only proceed if there's text or an image
+            if (userMessageText === '' && !hasImage) return;
+
+            // Display user's message (and image if present)
+            addMessage(userMessageText, 'user', uploadedImageBase64);
+
+            chatInput.value = ''; // Clear the input field
+            chatInput.disabled = true; // Disable input while waiting for response
+            sendButton.disabled = true; // Disable send button
+            uploadButton.disabled = true; // Disable upload button
+
+            showLoadingIndicator(); // Show loading indicator
+
+            try {
+                const currentDateTime = getCurrentDateTime();
+                const chatHistoryParts = [];
+
+                // Add a system-like instruction to make the bot smarter and more helpful
+                // Explicitly instruct the bot to be smart in math and programming
+                chatHistoryParts.push({
+                    text: `You are Chatty, a friendly, knowledgeable, and helpful AI assistant.
+                You are also an expert in mathematics and programming. When asked about these topics, provide detailed explanations,
+                code examples (if programming), and step-by-step solutions (if math).
+                Your goal is to provide comprehensive, accurate, and nuanced responses.
+                Always strive to understand the user's intent fully and provide detailed answers.
+                If a question is ambiguous, you may ask clarifying questions.
+                Current date and time: ${currentDateTime}.`
+                });
+
+                // Detect language and add instruction for the LLM
+                const detectedLang = detectLanguage(userMessageText);
+                chatHistoryParts.push({ text: `Please respond in ${detectedLang}.` });
+
+                // Add image data if available
+                if (hasImage) {
+                    chatHistoryParts.push({
+                        inlineData: {
+                            mimeType: "image/png", // Assuming PNG, adjust if needed (e.g., image/jpeg)
+                            data: uploadedImageBase64.split(',')[1] // Get base64 data part
+                        }
+                    });
+                }
+
+                // Add user's text message
+                if (userMessageText !== '') {
+                    chatHistoryParts.push({ text: `User message: ${userMessageText}` });
+                } else if (hasImage) {
+                    // If only an image is sent, provide a generic text prompt
+                    chatHistoryParts.push({ text: "User sent an image. Please describe or respond to it." });
+                }
+
+                const payload = { contents: [{ role: "user", parts: chatHistoryParts }] };
+                const apiKey = "AIzaSyCt1zdu1_0gUeNgz6wSLdbQYqJacB-WQe8"; // Leave this as-is. Canvas will provide the API key.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                removeLoadingIndicator(); // Remove loading indicator
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const botResponse = result.candidates[0].content.parts[0].text;
+                    addMessage(botResponse, 'bot');
+                } else {
+                    addMessage("Oops! Chatty couldn't generate a response. Please try again.", 'bot');
+                    console.error("Unexpected API response structure:", result);
+                }
+            } catch (error) {
+                removeLoadingIndicator();
+                addMessage("Sorry, I'm having trouble connecting. Please try again later.", 'bot');
+                console.error("Error communicating with the Gemini API:", error);
+            } finally {
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                uploadButton.disabled = false;
+                uploadedImageBase64 = null; // Clear the uploaded image after sending
+                fileInput.value = ''; // Clear the file input
+                chatInput.placeholder = "Type your message..."; // Reset placeholder
+                chatInput.focus();
+            }
+        }
+
+        // Event listener for the send button click
+        sendButton.addEventListener('click', sendMessage);
+
+        // Event listener for pressing Enter key in the input field
+        chatInput.addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Event listener for clearing the chat
+        clearChatButton.addEventListener('click', () => {
+            chatMessages.innerHTML = '<div class="bot-message message">Hello! I\'m Chatty, your friendly chatbot. How can I help you today?</div>';
+            uploadedImageBase64 = null; // Also clear any pending image
+            fileInput.value = ''; // Clear the file input
+            chatInput.placeholder = "Type your message..."; // Reset placeholder
+            chatInput.focus();
+        });
+
+        // Event listener for the upload photo button
+        uploadButton.addEventListener('click', () => {
+            fileInput.click(); // Programmatically click the hidden file input
+        });
+
+        // Event listener when a file is selected
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                // Check if the file is an image
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        uploadedImageBase64 = e.target.result; // Store the base64 string
+                        chatInput.placeholder = "Image ready! Add a message or send directly...";
+                        chatInput.focus(); // Keep focus on input
+                    };
+                    reader.readAsDataURL(file); // Read file as base64
+                } else {
+                    // If it's a document type, inform the user about limitations
+                    uploadedImageBase64 = null; // Ensure no image data is kept
+                    fileInput.value = ''; // Clear the file input
+                    addMessage("Chatty cannot directly read Word, PDF, or PowerPoint files. Please copy and paste the text from your document into the chat, or upload a screenshot if it's visual content.", 'bot');
+                    chatInput.placeholder = "Type your message or upload an image...";
+                    chatInput.focus();
+                }
+            } else {
+                uploadedImageBase64 = null;
+                chatInput.placeholder = "Type your message...";
+            }
+        });
+
+        // Password submission logic
+        passwordSubmit.addEventListener('click', () => {
+            if (passwordInput.value === CORRECT_PASSWORD) {
+                passwordOverlay.classList.add('hidden');
+                chatContainer.classList.remove('hidden');
+                chatInput.focus(); // Focus on chat input after successful login
+            } else {
+                passwordError.classList.remove('hidden');
+                passwordInput.value = ''; // Clear password input
+                passwordInput.focus(); // Keep focus on password input
+            }
+        });
+
+        // Allow pressing Enter in password field
+        passwordInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                passwordSubmit.click();
+            }
+        });
+
+        // Focus on the password input field when the page loads
+        window.onload = function () {
+            passwordInput.focus();
+        };
+    </script>
+</body>
+
+</html>
